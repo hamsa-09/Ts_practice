@@ -1,0 +1,60 @@
+<mat-card appearance="outlined" class="meme-card text-white bg-dark">
+  <mat-card-header>
+    <div class="header-meta">
+      <span class="author-tag">&#64;{{ meme.author }}</span>
+      <span class="meta-item">Team: {{ meme.team }}</span>
+      <span class="meta-item">Mood: {{ meme.mood }}</span>
+      <span class="meta-item">{{ meme.timestamp | date:'shortTime' }}</span>
+    </div>
+
+    <button mat-icon-button [matMenuTriggerFor]="menu" class="menu-button">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #menu="matMenu">
+      <button mat-menu-item (click)="onEdit()">
+        <mat-icon>edit</mat-icon>
+        <span>Edit</span>
+      </button>
+      <button mat-menu-item (click)="onDelete()">
+        <mat-icon>delete</mat-icon>
+        <span>Delete</span>
+      </button>
+      <button mat-menu-item (click)="onFlag()" [disabled]="isFlagged">
+        <mat-icon>flag</mat-icon>
+        <span>{{ isFlagged ? 'Flagged' : 'Report/Flag' }}</span>
+      </button>
+    </mat-menu>
+  </mat-card-header>
+
+  <mat-card-content>
+    <h3 *ngIf="meme.title" class="meme-title">{{ meme.title }}</h3>
+    <div class="meme-body">
+      <ng-container *ngFor="let part of parsedContent">
+        <span *ngIf="!part.isSpoiler">{{ part.text }}</span>
+        <span *ngIf="part.isSpoiler"
+              class="simple-spoiler"
+              [class.revealed]="part.revealed"
+              (click)="toggleSpoiler(part)">
+          {{ part.text }}
+        </span>
+      </ng-container>
+    </div>
+  </mat-card-content>
+
+  <mat-card-footer>
+    <div class="tags-container">
+      <span class="tag-chip" *ngFor="let tag of meme.tags">{{ tag }}</span>
+    </div>
+    <div class="actions">
+      <button mat-icon-button (click)="onLike()" [color]="isLiked ? 'warn' : ''">
+        <mat-icon>{{ isLiked ? 'favorite' : 'favorite_border' }}</mat-icon>
+      </button>
+      <span class="action-count">{{ meme.likes }}</span>
+
+      <button mat-icon-button (click)="onBookmark()" [color]="isBookmarked ? 'primary' : ''">
+        <mat-icon>{{ isBookmarked ? 'bookmark' : 'bookmark_border' }}</mat-icon>
+      </button>
+      <span class="action-count">{{ meme.bookmarks }}</span>
+    </div>
+  </mat-card-footer>
+</mat-card>

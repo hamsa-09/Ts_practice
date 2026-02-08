@@ -1,0 +1,43 @@
+[33mΓ¥»[39m Building...
+[32mΓ£ö[39m Building...
+Application bundle generation failed. [20.544 seconds]
+
+X [ERROR] NG5002: Unclosed block "" [plugin angular-compiler]
+
+    src/app/components/meme-card/meme-card.component.html:4:31:
+      4 Γöé       <span class="author-tag">@{{ meme.author }}</span>
+        Γò╡                                ~~
+
+  Error occurs in the template of component MemeCardComponent.
+
+    src/app/components/meme-card/meme-card.component.ts:21:15:
+      21 Γöé   templateUrl: './meme-card.component.html',
+         Γò╡                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+X [ERROR] NG5002: Invalid ICU message. Missing '}'. [plugin angular-compiler]
+
+    src/app/components/meme-card/meme-card.component.html:61:0:
+      61 Γöé 
+         Γò╡ ^
+
+  Error occurs in the template of component MemeCardComponent.
+
+    src/app/components/meme-card/meme-card.component.ts:21:15:
+      21 Γöé   templateUrl: './meme-card.component.html',
+         Γò╡                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+X [ERROR] NG5002: Unexpected character "EOF" (Do you have an unescaped "{" in your template? Use "{{ '{' }}") to escape it.) [plugin angular-compiler]
+
+    src/app/components/meme-card/meme-card.component.html:61:0:
+      61 Γöé 
+         Γò╡ ^
+
+  Error occurs in the template of component MemeCardComponent.
+
+    src/app/components/meme-card/meme-card.component.ts:21:15:
+      21 Γöé   templateUrl: './meme-card.component.html',
+         Γò╡                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+

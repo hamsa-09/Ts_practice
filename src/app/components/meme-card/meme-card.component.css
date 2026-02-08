@@ -1,0 +1,99 @@
+.meme-card {
+  margin-bottom: 20px;
+  background-color: #1a1a1a !important;
+  border: 1px solid #333 !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: #888;
+  padding: 8px 0;
+}
+
+.author-tag {
+  background: #333;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-weight: 500;
+}
+
+.meta-item {
+  color: #aaa;
+}
+
+.meme-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 12px 0 8px 0;
+  color: #ffffff;
+}
+
+.meme-body {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #ddd;
+}
+
+/* Simplified Spoiler - Black Bar */
+.simple-spoiler {
+  background-color: #000;
+  color: #000;
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.simple-spoiler.revealed {
+  background-color: #444;
+  color: #fff;
+}
+
+mat-card-footer {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #222;
+}
+
+.tags-container {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag-chip {
+  background: #233549;
+  color: #7ab3ef;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+}
+
+.action-count {
+  font-size: 0.9rem;
+  color: #888;
+  margin: 0 12px 0 4px;
+}
+
+.menu-button {
+  margin-left: auto;
+  color: #888;
+}
+
+.text-white { color: white; }
+.bg-dark { background-color: #1a1a1a; }
