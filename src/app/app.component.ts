@@ -1,11 +1,10 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, signal, effect, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
-import { MemeService } from './services/meme.service';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { MemeListComponent } from './components/meme-list/meme-list.component';
 import { MemeModalComponent } from './components/meme-modal/meme-modal.component';
-import { Meme } from './models/meme.model';
+import { Meme, UserPrefs, DraftContent } from './models/meme.model';
 
 @Component({
   selector: 'app-root',
@@ -25,7 +24,7 @@ import { Meme } from './models/meme.model';
     <main class="main-content">
       <app-meme-list
         [memes]="filteredMemes()"
-        [userPrefs]="memeService.userPrefs()"
+        [userPrefs]="userPrefs()"
         (like)="onLike($event)"
         (bookmark)="onBookmark($event)"
         (edit)="onEdit($event)"
@@ -44,10 +43,21 @@ import { Meme } from './models/meme.model';
   `]
 })
 export class AppComponent {
-  memeService = inject(MemeService);
+  private readonly MEMES_KEY = 'MEMES_DATA';
+  private readonly USER_KEY = 'USER_PREFS';
   dialog = inject(MatDialog);
 
-  // Filter state
+  // --- State (Moved from Service) ---
+  memes = signal<Meme[]>([]);
+  userPrefs = signal<UserPrefs>({
+    username: 'CodeNinja',
+    likedMemeIds: [],
+    bookmarkedMemeIds: [],
+    flaggedMemeIds: [],
+    drafts: {}
+  });
+
+  // --- Filtering & Sorting State ---
   searchTerm = signal('');
   teamFilter = signal('');
   moodFilter = signal('');
@@ -55,122 +65,137 @@ export class AppComponent {
   showSavedOnly = signal(false);
   sortOrder = signal('newest');
 
-  // Computed
+  constructor() {
+    this.loadFromStorage();
+
+    // Auto-save logic (runs whenever state changes)
+    effect(() => {
+        localStorage.setItem(this.USER_KEY, JSON.stringify(this.userPrefs()));
+        localStorage.setItem(this.MEMES_KEY, JSON.stringify(this.memes()));
+    });
+  }
+
+  // --- LocalStorage Helpers ---
+  private loadFromStorage() {
+    const storedMemes = localStorage.getItem(this.MEMES_KEY);
+    if (storedMemes) {
+      try {
+        const parsed = JSON.parse(storedMemes);
+        // Basic migration to ensure new fields exist
+        this.memes.set(parsed.map((m: any) => ({
+          ...m,
+          bookmarks: m.bookmarks || 0,
+          flags: m.flags || 0
+        })));
+      } catch (e) { this.memes.set([]); }
+    } else {
+      this.memes.set([{
+        id: '1', title: 'Welcome to Meme Forum', author: 'Admin', team: 'Engineering',
+        mood: 'Happy', content: 'Happy coding! ||reveal me||', tags: ['welcome'],
+        timestamp: Date.now(), likes: 0, bookmarks: 0, flags: 0
+      }]);
+    }
+
+    const storedUser = localStorage.getItem(this.USER_KEY);
+    if (storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser);
+        this.userPrefs.set({
+          ...parsed,
+          likedMemeIds: parsed.likedMemeIds || [],
+          bookmarkedMemeIds: parsed.bookmarkedMemeIds || [],
+          flaggedMemeIds: parsed.flaggedMemeIds || [],
+          drafts: parsed.drafts || {}
+        });
+      } catch (e) { /* use default */ }
+    }
+  }
+
+  // --- Computed (Filter Logic) ---
   filteredMemes = computed(() => {
-    let memes = this.memeService.memes();
+    let list = this.memes();
     const term = this.searchTerm().toLowerCase();
     const team = this.teamFilter();
     const mood = this.moodFilter();
     const likedOnly = this.showLikedOnly();
     const savedOnly = this.showSavedOnly();
-    const userPrefs = this.memeService.userPrefs();
+    const prefs = this.userPrefs();
 
-    // 1. Text Search (Title & Body Only)
     if (term) {
-      memes = memes.filter(m =>
-        (m.title?.toLowerCase().includes(term) || false) ||
-        m.content.toLowerCase().includes(term)
-      );
+      list = list.filter(m => (m.title?.toLowerCase().includes(term) || m.content.toLowerCase().includes(term)));
     }
+    if (team) list = list.filter(m => m.team === team);
+    if (mood) list = list.filter(m => m.mood === mood);
+    if (likedOnly) list = list.filter(m => prefs.likedMemeIds.includes(m.id));
+    if (savedOnly) list = list.filter(m => prefs.bookmarkedMemeIds.includes(m.id));
 
-    // 2. Team Filter
-    if (team) {
-      memes = memes.filter(m => m.team === team);
-    }
-
-    // 3. Mood Filter
-    if (mood) {
-      memes = memes.filter(m => m.mood === mood);
-    }
-
-    // 4. Liked Only Filter
-    if (likedOnly) {
-      memes = memes.filter(m => userPrefs.likedMemeIds.includes(m.id));
-    }
-
-    // 5. Saved Only Filter
-    if (savedOnly) {
-      memes = memes.filter(m => userPrefs.bookmarkedMemeIds.includes(m.id));
-    }
-
-    // 6. Sort
-    const order = this.sortOrder();
-    memes = [...memes].sort((a, b) => {
-        if (order === 'newest') return b.timestamp - a.timestamp;
-        if (order === 'oldest') return a.timestamp - b.timestamp;
-        return 0;
-    });
-
-    return memes;
+    return [...list].sort((a, b) => this.sortOrder() === 'newest' ? b.timestamp - a.timestamp : a.timestamp - b.timestamp);
   });
 
-  updateSearch(term: string) {
-    this.searchTerm.set(term);
-  }
-
-  updateTeam(team: string) {
-    this.teamFilter.set(team);
-  }
-
-  updateMood(mood: string) {
-    this.moodFilter.set(mood);
-  }
-
-  toggleLiked(enabled: boolean) {
-    this.showLikedOnly.set(enabled);
-  }
-
-  toggleSaved(enabled: boolean) {
-    this.showSavedOnly.set(enabled);
-  }
-
-  updateSort(order: string) {
-    this.sortOrder.set(order);
-  }
+  // --- Actions (Called from child components) ---
+  updateSearch(term: string) { this.searchTerm.set(term); }
+  updateTeam(team: string) { this.teamFilter.set(team); }
+  updateMood(mood: string) { this.moodFilter.set(mood); }
+  toggleLiked(enabled: boolean) { this.showLikedOnly.set(enabled); }
+  toggleSaved(enabled: boolean) { this.showSavedOnly.set(enabled); }
+  updateSort(order: string) { this.sortOrder.set(order); }
 
   onLike(id: string) {
-    this.memeService.toggleLike(id);
+    const prefs = this.userPrefs();
+    const isLiked = prefs.likedMemeIds.includes(id);
+    this.userPrefs.update(p => ({
+      ...p,
+      likedMemeIds: isLiked ? p.likedMemeIds.filter(mid => mid !== id) : [...p.likedMemeIds, id]
+    }));
+    this.memes.update(ms => ms.map(m => m.id === id ? { ...m, likes: m.likes + (isLiked ? -1 : 1) } : m));
   }
 
   onBookmark(id: string) {
-    this.memeService.toggleBookmark(id);
-  }
-
-  onEdit(meme: Meme) {
-    const dialogRef = this.dialog.open(MemeModalComponent, {
-      width: '600px',
-      panelClass: 'custom-dialog-container',
-      data: { meme }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.memeService.updateMeme(meme.id, result);
-      }
-    });
-  }
-
-  onDelete(id: string) {
-    if (confirm('Are you sure you want to delete this meme?')) {
-      this.memeService.deleteMeme(id);
-    }
+    const prefs = this.userPrefs();
+    const isBookmarked = prefs.bookmarkedMemeIds.includes(id);
+    this.userPrefs.update(p => ({
+      ...p,
+      bookmarkedMemeIds: isBookmarked ? p.bookmarkedMemeIds.filter(mid => mid !== id) : [...p.bookmarkedMemeIds, id]
+    }));
+    this.memes.update(ms => ms.map(m => m.id === id ? { ...m, bookmarks: m.bookmarks + (isBookmarked ? -1 : 1) } : m));
   }
 
   onFlag(id: string) {
-    if (confirm('Report this meme as inappropriate?')) {
-      this.memeService.toggleFlag(id);
+    if (!this.userPrefs().flaggedMemeIds.includes(id) && confirm('Report this post?')) {
+      this.userPrefs.update(p => ({ ...p, flaggedMemeIds: [...p.flaggedMemeIds, id] }));
+      this.memes.update(ms => ms.map(m => m.id === id ? { ...m, flags: m.flags + 1 } : m));
     }
   }
 
+  onDelete(id: string) {
+    if (confirm('Delete this post?')) this.memes.update(ms => ms.filter(m => m.id !== id));
+  }
+
+  onEdit(meme: Meme) {
+    const dialogRef = this.dialog.open(MemeModalComponent, { width: '600px', data: { meme } });
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) this.memes.update(ms => ms.map(m => m.id === meme.id ? { ...m, ...result, updatedAt: Date.now() } : m));
+    });
+  }
+
   openCreateModal() {
-    const dialogRef = this.dialog.open(MemeModalComponent, {
-      width: '600px',
-      panelClass: 'custom-dialog-container'
+    const draft = this.userPrefs().drafts['new_meme'];
+    const dialogRef = this.dialog.open(MemeModalComponent, { width: '600px', data: { draft } });
+
+    // Save draft when modal writes to it (handled via output or listener)
+    const sub = dialogRef.componentInstance.draftSaved.subscribe((d: DraftContent) => {
+      this.userPrefs.update(p => ({ ...p, drafts: { ...p.drafts, 'new_meme': d } }));
     });
 
     dialogRef.afterClosed().subscribe(result => {
+      sub.unsubscribe();
       if (result) {
-        this.memeService.addMeme(result);
+        const newMeme: Meme = { ...result, id: crypto.randomUUID(), timestamp: Date.now(), likes: 0, bookmarks: 0, flags: 0 };
+        this.memes.update(ms => [newMeme, ...ms]);
+        this.userPrefs.update(p => {
+          const { new_meme, ...rest } = p.drafts;
+          return { ...p, drafts: rest };
+        });
       }
     });
   }
